@@ -52,16 +52,18 @@ function Get-UserInfo {
             Write-Host "User is currently locked out since: " -NoNewLine
             Write-Host $LockedSince
             Write-Host "[WARNING] " -ForegroundColor Red
+
+            Write-Host
         }
 
         if ($userInfo.AccountExpirationDate -ne $null) {
             $Today = (Get-Date)
             if (-Not($userInfo.AccountExpirationDate -lt $Today)) {
-                Write-Host "[INFO]: " -ForegroundColor Yellow
-                Write-Host "[INFO]: " -ForegroundColor Yellow -NoNewLine
+                Write-Host "[INFO] " -ForegroundColor Yellow
+                Write-Host "[INFO] " -ForegroundColor Yellow -NoNewLine
                 Write-Host "User is set to expire: " -NoNewLine
                 Write-Host $userInfo.AccountExpirationDate
-                Write-Host "[INFO]: " -ForegroundColor Yellow
+                Write-Host "[INFO] " -ForegroundColor Yellow
             } else {
                 Write-Host "[WARNING] " -ForegroundColor Red
                 Write-Host "[WARNING] " -ForegroundColor Red -NoNewLine
@@ -69,6 +71,8 @@ function Get-UserInfo {
                 Write-Host $userInfo.AccountExpirationDate
                 Write-Host "[WARNING] " -ForegroundColor Red
             }
+
+            Write-Host
         }
 
         $FirstName = $userInfo.GivenName
@@ -76,9 +80,11 @@ function Get-UserInfo {
         $Email = $userInfo.EmailAddress
         $Title = $userInfo.Description
         $Department = $userInfo.Department
+        $BadgeNumber = $userInfo.extensionAttribute8
         $IsSupervisor = if ($userInfo.directReports -ne $null -or (($Title | select-string "supervisor") -or ($Title | select-string "manager") -or ($Title | select-string "director"))) { $True } else { $False }
-        $ManagerSearch = if ($userInfo.Manager -ne $null) { Get-ADUser -Filter * -SearchBase $userInfo.Manager | select GivenName, Surname } else { $null }
+        $ManagerSearch = if ($userInfo.Manager -ne $null) { Get-ADUser -Filter * -SearchBase $userInfo.Manager -properties title | select GivenName, Surname, Title } else { $null }
         $Manager = if ($ManagerSearch -ne $null) { "$($ManagerSearch.GivenName) $($ManagerSearch.Surname)" } else { 'None' }
+        $ManagerTitle = if ($ManagerSearch -ne $null) { $ManagerSearch.Title } else { 'None' }
         $OfficePhone = if ($userInfo.OfficePhone -ne $null) { $userInfo.OfficePhone } else { 'None' }
         $LastLogon = [DateTime]::FromFileTime($userInfo.LastLogon)
         $ExchangeType = $userInfo.msExchRecipientTypeDetails
@@ -89,8 +95,14 @@ function Get-UserInfo {
         $ADGroupImprivata = if ($userInfo.MemberOf | select-string "imprivata") { 'Yes' } else { 'No' }
         $ADGroupNetscaler = if ($userInfo.MemberOf | select-string "netscaler app") { 'Yes' } else { 'No' }
         $ADGroupVPN = if ($userInfo.MemberOf | select-string "vpn access") { 'Yes' } else { 'No' }
-
-
+        $ADGroupXenMobile = if ($userInfo.MemberOf | select-string "xenmobile") { 'Yes' } else { 'No' }
+        $XenMobileType = 'Unknown'
+        if ($ADGroupXenMobile -eq 'Yes') {
+            # Check XenMobile Type
+            $XenAndroid = "SG_XenMobile_BYOD"
+            $XenIOS = "XenMobile"
+            $XenMobileType = if ($userInfo.MemberOf | select-string $XenAndroid) { 'Android' } elseif ($userInfo.MemberOf | select-string $XenIOS) { 'iOS' } else { 'Unknown' }
+        }
     }
     CATCH {
         $Everything_is_OK = $false
@@ -115,18 +127,22 @@ function Get-UserInfo {
             "Email"                     = $Email;
             "Title"                     = $Title;
             "Department"                = $Department;
+            "Badge Number"              = $BadgeNumber;
             "Is Supervisor"             = if ($IsSupervisor) { "$esc[${greenBright}m$($IsSupervisor)$esc[0m" } else { "$esc[${red}m$($IsSupervisor)$esc[0m" };
             "Manager"                   = $Manager;
+            "Manager Title"             = $ManagerTitle;
             "Office Phone"              = $OfficePhone;
-            "Last Logon"                = $LastLogon;
             "Exchange Type"             = $ExchangeCheck;
             "SIP Address"               = $SIP;
+            "Last Logon"                = $LastLogon;
             "Last Bad Password Attempt" = $PasswordLastBadAttempt;
             "Password Last Set Date"    = $PasswordLastSet;
             "AD Groups"                 = "----------------------------";
             "ImpSync"                   = if ($ADGroupImprivata -eq 'yes') { "$esc[${green}m$($ADGroupImprivata)$esc[0m" } else { "$esc[${redBright}m$($ADGroupImprivata)$esc[0m" };
             "Netscaler"                 = if ($ADGroupNetscaler -eq 'yes') { "$esc[${green}m$($ADGroupNetscaler)$esc[0m" } else { "$esc[${redBright}m$($ADGroupNetscaler)$esc[0m" };
             "VPN"                       = if ($ADGroupVPN -eq 'yes') { "$esc[${green}m$($ADGroupVPN)$esc[0m" } else { "$esc[${redBright}m$($ADGroupVPN)$esc[0m" };
+            "Has XenMobile Access"      = if ($ADGroupXenMobile -eq 'yes') { "$esc[${green}m$($ADGroupXenMobile)$esc[0m" } else { "$esc[${redBright}m$($ADGroupXenMobile)$esc[0m" };
+            "XenMobile Type"            = $XenMobileType;
         }
 
         $output = New-Object -TypeName PSObject -Property $Info
@@ -156,9 +172,7 @@ function Get-UserInfo {
     }
     
     # Cleanup variables
-    Remove-Variable -Name output, Info, UserName, userInfo, user, FirstName, LastName, Email, Title, Department, IsSupervisor, OfficePhone,
-    LastLogon, ExchangeType, ExchangeCheck, SIP, PasswordLastBadAttempt, PasswordLastSet, AddToImprivata, ADGroupImprivata, ADGroupNetscaler,
-    ADGroupVPN, esc, green, greenBright, red, redBright, yellow, yellowBright, Everything_is_OK -ErrorAction SilentlyContinue
+    Remove-Variable -Name * -ErrorAction SilentlyContinue
 
     Read-Host "Press any key to continue..."
     Clear-Host
