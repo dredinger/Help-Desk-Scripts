@@ -1,6 +1,6 @@
 function Get-ComputerInfo {
 
-    PARAM(
+    param(
         [Parameter (Mandatory=$false)]
         $cname,
 
@@ -9,7 +9,7 @@ function Get-ComputerInfo {
         $UserAdminPrefix = "",
         $UserAdminSuffix = "",
 
-        $ErrorLog = "c:\Users\$env:USERNAME\Desktop\PSErrors.log",
+        $ErrorLog = "c:\Users\$env:USERNAME\Desktop\PSPCInfoErrors.log",
         
         [System.Management.Automation.PSCredential]
         [System.Management.Automation.Credential()]
@@ -47,12 +47,12 @@ function Get-ComputerInfo {
     } else {
         Write-Host "offline" -ForegroundColor Red
         $ComputerName = $NULL
-        Read-Host "Press any key to continue..."
+        Read-Host "Press any key to retry..."
         Clear-Host
         Get-ComputerInfo
     }
 
-    TRY {
+    try {
         $Splatting = @{
             ComputerName = $ComputerName
             Credential = $Creds
@@ -124,18 +124,17 @@ function Get-ComputerInfo {
         # Count cores
         $Cores = 0
         $Sockets = 0
-        FOREACH ($Proc in $Processors) {
-            IF ($null -eq $Proc.numberofcores) {
-                IF ($null -ne $Proc.SocketDesignation) { $Sockets++ }
+        foreach ($Proc in $Processors) {
+            if ($null -eq $Proc.numberofcores) {
+                if ($null -ne $Proc.SocketDesignation) { $Sockets++ }
                 $Cores++
-            }
-            ELSE {
+            } else {
                 $Sockets++
                 $Cores += $proc.numberofcores
             }
         }
     }
-    CATCH {
+    catch {
         $Everything_is_OK = $false
         Write-Warning -Message "Error on $ComputerName"
         $ComputerName | Out-File -FilePath $ErrorLog -Append -ErrorAction Continue
@@ -144,7 +143,7 @@ function Get-ComputerInfo {
     }
 
 
-    IF ($Everything_is_OK) {
+    if ($Everything_is_OK) {
         # Build output
         $Info = [ordered]@{
             "ComputerName"       = $OperatingSystem.__Server;
@@ -169,8 +168,7 @@ function Get-ComputerInfo {
         $output
         Write-Host
         $CitrixRequest = Read-Host "The next portion will take some time - verifying Citrix version... Press any key to continue or q to quit . . ."
-        if ($CitrixRequest -eq "q")
-        {
+        if ($CitrixRequest -eq "q") {
             Clear-Host
             Get-ComputerInfo
         }
@@ -180,12 +178,10 @@ function Get-ComputerInfo {
 
         #$RegistryKey = "VirtualDriver"
         #$RegistryLocation = "SOFTWARE\WOW6432Node\Citrix\ICA Client\Engine\Configuration\Advanced\Modules\ICA 3.0"
-        
+
         #$RegistryValue = $Registry.OpenSubKey($RegistryLocation)
-        #$RegistryValue.GetValue($RegistryKey)
-        
-        #$VirtualDriver = Get-WmiObject -List @Splatting | Where-Object {$_.Name -eq "StdRegProv"}
-        #$Registry.GetExpandedStringValue($HKLM, 'SOFTWARE\WOW6432Node\Citrix\ICA Client\Engine\Configuration\Advanced\Modules\ICA 3.0', $RegistryKey)
+        #$CitrixKeys = $RegistryValue.GetValue($RegistryKey)
+        #$CitrixKeys
 
 
         # Query Product class
@@ -195,10 +191,7 @@ function Get-ComputerInfo {
     }
     
     # Cleanup variables
-    Remove-Variable -Name output, info, ProcessError, Sockets, Cores, OperatingSystem, ComputerSystem, Processors,
-    ComputerName, Computer, Credential, NetworkAdapter, ComputerType, ADName, ADJobTitle, LoggedUserName, OU, Uptime, 
-    LastBoot, Creds, IP, Days, Hours, Minutes, LoggedUserSplit1, LoggedUserSplit, DHCP, Groups, LocalAdmins, Proc, 
-    Everything_is_OK -ErrorAction SilentlyContinue
+    Remove-Variable -Name output, Info, ProcessError, Sockets, Cores, OperatingSystem, ComputerSystem, Processors, ComputerName, Computer, Credential, NetworkAdapter, ComputerType, ADName, ADJobTitle, LoggedUserName, OU, Uptime, LastBoot, Creds, IP, Days, Hours, Minutes, LoggedUserSplit1, LoggedUserSplit, DHCP, Groups, LocalAdmins, Proc, CitrixVersions, Everything_is_OK -ErrorAction SilentlyContinue
 
     Read-Host "Press any key to continue..."
     Clear-Host
