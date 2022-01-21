@@ -1,5 +1,7 @@
 function Get-UserInfo {
 
+    [cmdletbinding()]
+
     PARAM (
         [Parameter (Mandatory=$false, ValueFromPipeline=$true)]
         $uname,
@@ -147,8 +149,10 @@ function Get-UserInfo {
             "XenMobile Type"            = $XenMobileType;
         }
 
-        $output = New-Object -TypeName PSObject -Property $Info
-        $output
+        #$output = New-Object -TypeName PSObject -Property $Info
+        #$output
+
+        [PSCustomObject]$Info | Out-Host
 
         if (($userInfo.LockedOut) -and ($user.Enabled -eq $true)) {
             Write-Host
@@ -172,11 +176,11 @@ function Get-UserInfo {
 
 
     }
-    
-    Read-Host "Press any key to clear history..."
 
     # Cleanup variables
     Remove-Variable -Name * -ErrorAction SilentlyContinue
+    
+    Read-Host "Press any key to clear history..."
 
     Clear-Host
     Get-UserInfo
