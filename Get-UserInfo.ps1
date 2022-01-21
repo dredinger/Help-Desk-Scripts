@@ -1,8 +1,10 @@
 function Get-UserInfo {
 
     PARAM (
-        [Parameter (Mandatory=$false)]
-        $uname
+        [Parameter (Mandatory=$false, ValueFromPipeline=$true)]
+        $uname,
+
+        $ErrorLog = "c:\Users\$env:USERNAME\Desktop\PSUserInfoErrors.log"
     )
 
     Write-Host
@@ -32,7 +34,7 @@ function Get-UserInfo {
     } elseif ($user -eq $null) {
         Write-Host "does not exist" -ForegroundColor Red
         $UserName = $NULL
-        Read-Host "Press any key to continue..."
+        Read-Host "Press any key to retry..."
         Clear-Host
         Get-UserInfo
     }
@@ -171,10 +173,11 @@ function Get-UserInfo {
 
     }
     
+    Read-Host "Press any key to clear history..."
+
     # Cleanup variables
     Remove-Variable -Name * -ErrorAction SilentlyContinue
 
-    Read-Host "Press any key to continue..."
     Clear-Host
     Get-UserInfo
 
